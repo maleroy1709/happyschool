@@ -1,0 +1,17 @@
+{% extends "core/base_vue.html" %}
+
+{% block header %}
+<title>HappySchool : Absence des élèves</title>
+{% endblock %}
+{% block content %}
+<script>
+    const current_app = "student_absence";
+    const settings = JSON.parse('{{ settings|safe }}');
+    const menu = {{ menu|safe }};
+    const filters = JSON.parse('{{ filters|safe }}');
+</script>
+<div id="vue-app"></div>
+{% load render_bundle from webpack_loader %}
+{% render_bundle 'student_absence' %}
+
+{% endblock %}
