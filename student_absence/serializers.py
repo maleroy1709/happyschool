@@ -21,7 +21,13 @@ from rest_framework import serializers
 
 from core.serializers import StudentSerializer
 from core.models import StudentModel
-from student_absence.models import StudentAbsenceModel
+from student_absence.models import StudentAbsenceModel, StudentAbsenceSettingsModel
+
+
+class StudentAbsenceSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentAbsenceSettingsModel
+        fields = '__all__'
 
 
 class StudentAbsenceSerializer(serializers.ModelSerializer):

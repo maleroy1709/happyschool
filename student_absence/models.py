@@ -18,7 +18,14 @@
 # along with HappySchool.  If not, see <http://www.gnu.org/licenses/>.
 
 from django.db import models
-from core.models import StudentModel
+from core.models import StudentModel, TeachingModel
+
+
+# Les paramètres de notre application.
+class StudentAbsenceSettingsModel(models.Model):
+    # Les enseignements/établissements utilisés par l'application.
+    # Ne pas oublier de mettre une valeur par défaut pour la création automatique.
+    teachings = models.ManyToManyField(TeachingModel, default=None)
 
 
 # Notre modèle d'absence.

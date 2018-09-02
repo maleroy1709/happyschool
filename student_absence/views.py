@@ -31,8 +31,17 @@ from core.people import get_classes
 from core.utilities import get_menu
 
 
-from student_absence.models import StudentAbsenceModel
-from student_absence.serializers import StudentAbsenceSerializer
+from student_absence.models import StudentAbsenceModel, StudentAbsenceSettingsModel
+from student_absence.serializers import StudentAbsenceSerializer, StudentAbsenceSettingsSerializer
+
+
+def get_settings():
+    settings_student_absence = StudentAbsenceSettingsModel.objects.first()
+    if not settings_student_absence:
+        # Create default settings.
+        StudentAbsenceSettingsModel.objects.create().save()
+
+    return settings_student_absence
 
 
 class StudentAbsenceView(LoginRequiredMixin,
@@ -50,7 +59,7 @@ class StudentAbsenceView(LoginRequiredMixin,
         context = super().get_context_data(**kwargs)
         context['menu'] = json.dumps(get_menu(self.request.user, "student_absence"))
         context['filters'] = json.dumps(self.filters)
-        context['settings'] = json.dumps({})
+        context['settings'] = json.dumps((StudentAbsenceSettingsSerializer(get_settings()).data))
         return context
 
 
@@ -80,7 +89,6 @@ class StudentAbsenceFilter(BaseFilters):
 
 class StudentAbsenceViewSet(BaseModelViewSet):
     queryset = StudentAbsenceModel.objects.filter(student__isnull=False)
-    filter_access = True
 
     serializer_class = StudentAbsenceSerializer
     permission_classes = (IsAuthenticated, DjangoModelPermissions,)

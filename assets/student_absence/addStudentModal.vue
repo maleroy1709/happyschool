@@ -22,6 +22,8 @@
     <b-modal size="lg" title="Nouvelle absence"
         ok-title="Soumettre" cancel-title="Annuler"
         ref="addStudentModal"
+        :ok-disabled="!student.matricule || (!form.morning && !form.afternoon)"
+        @ok="addAbsence" @hidden="resetAbsence"
         >
         <b-form>
             <b-form-row>
@@ -55,15 +57,17 @@
             <b-form-row class="mt-4">
                 <b-col>
                     <b-form-row>
-                        <b-form-group label="À partir du">
-                            <input type="date" v-model="form.date_absence_start" :max="form.date_absence_end" />
+                        <b-form-group label="À partir du" :state="inputStates.date_absence_start">
+                            <input type="date" v-model="form.date_absence_start" :max="form.date_absence_end"/>
+                            <span slot="invalid-feedback">{{ errorMsg('date_absence_start') }}</span>
                         </b-form-group>
                     </b-form-row>
                 </b-col>
                 <b-col>
                     <b-form-row>
-                        <b-form-group label="Jusqu'au">
-                            <input type="date" v-model="form.date_absence_end" :min="form.date_absence_start" />
+                        <b-form-group label="Jusqu'au" :state="inputStates.date_absence_end">
+                            <input type="date" v-model="form.date_absence_end" :min="form.date_absence_start"/>
+                            <span slot="invalid-feedback">{{ errorMsg('date_absence_end') }}</span>
                         </b-form-group>
                     </b-form-row>
                 </b-col>
@@ -96,7 +100,7 @@ export default {
     data: function () {
         return {
             form: {
-                matricule_id: null,
+                student_id: null,
                 date_absence_start: null,
                 date_absence_end: null,
                 morning: true,
@@ -107,6 +111,8 @@ export default {
             studentLoading: false,
             inputStates: {
                 student: null,
+                date_absence_start: null,
+                date_absence_end: null,
             },
             errors: {},
             searchId: -1,
@@ -116,6 +122,19 @@ export default {
         'form.date_absence_start': function (date) {
             if (this.form.date_absence_end === null) this.form.date_absence_end = date;
         },
+        entry: function (entry, oldEntry) {
+            this.setEntry(entry);
+        },
+        errors: function (newErrors, oldErrors) {
+            let inputs = Object.keys(this.inputStates);
+            for (let u in inputs) {
+                if (inputs[u] in newErrors) {
+                    this.inputStates[inputs[u]] = newErrors[inputs[u]].length == 0;
+                } else {
+                    this.inputStates[inputs[u]] = null;
+                }
+            }
+        },
     },
     methods: {
         show: function () {
@@ -123,6 +142,55 @@ export default {
         },
         hide: function () {
             this.$refs.addStudentModal.hide();
+        },
+        resetAbsence: function () {
+            this.$emit('reset');
+
+            this.form = {
+                student_id: null,
+                date_absence_start: null,
+                date_absence_end: null,
+                morning: true,
+                afternoon: true,
+            };
+            this.student =  {matricule: null};
+        },
+        setEntry: function (entry) {
+            if (entry) {
+                this.student = entry.student;
+                this.form = {
+                    student_id: entry.student.matricule,
+                    date_absence_start: entry.date_absence_start,
+                    date_absence_end: entry.date_absence_end,
+                    morning: entry.morning,
+                    afternoon: entry.afternoon,
+                    id: entry.id,
+                }
+            } else {
+                this.resetAbsence();
+            }
+        },
+        addAbsence: function (evt) {
+            // Prevent form to be sent.
+            evt.preventDefault();
+
+            this.form.student_id = this.student.matricule;
+
+            let modal = this;
+            const token = { xsrfCookieName: 'csrftoken', xsrfHeaderName: 'X-CSRFToken'};
+            let path = '/student_absence/api/student_absence/';
+            if (this.entry) path += this.entry.id + '/'
+
+            const send = this.entry ? axios.put(path, this.form, token) : axios.post(path, this.form, token);
+            send.then(response => {
+                this.hide();
+                this.errors = {};
+                this.$emit('update');
+            }).catch(function (error) {
+                modal.errors = error.response.data;
+            });
+
+            this.entry = null;
         },
         getStudentOptions: function (query) {
             let app = this;
@@ -169,6 +237,8 @@ export default {
     },
     components: {Multiselect},
     mounted: function () {
+        if (this.entry) this.setEntry(this.entry);
+
         this.show();
     },
 }

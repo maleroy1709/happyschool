@@ -58,6 +58,9 @@
                     v-for="(entry, index) in entries"
                     v-bind:key="entry.id"
                     v-bind:row-data="entry"
+                    @delete="askDelete(entry)"
+                    @edit="editEntry(index)"
+                    @filterStudent="filterStudent($event)"
                         >
                     </student-absence-entry>
                 </b-col>
@@ -65,8 +68,14 @@
         </b-container>
         <component
             v-bind:is="currentModal" ref="dynamicModal"
-            @update="loadEntries">
+            :entry="currentEntry"
+            @update="loadEntries"
+            @reset="currentEntry = null">
         </component>
+        <b-modal ref="deleteModal" cancel-title="Annuler" hide-header centered
+            @ok="deleteEntry" @cancel="currentEntry = null">
+            Êtes-vous sûr de vouloir supprimer définitivement cette entrée ?
+        </b-modal>
     </div>
 </template>
 
@@ -99,6 +108,7 @@ export default {
             loaded: false,
             showFilters: false,
             currentModal: '',
+            currentEntry: null,
         }
     },
     methods: {
@@ -129,6 +139,13 @@ export default {
             this.currentPage = 1;
             this.loadEntries();
         },
+        filterStudent: function (matricule) {
+            this.showFilters = true;
+            this.$store.commit('addFilter',
+                {filterType: 'student_id', tag: matricule, value: matricule}
+            );
+            this.applyFilter()
+        },
         loadEntries: function () {
             // Get current absences.
             axios.get('/student_absence/api/student_absence/?page=' + this.currentPage + this.filter + this.ordering)
@@ -138,7 +155,24 @@ export default {
                 // Everything is ready, hide the loading icon and show the content.
                 this.loaded = true;
             });
-        }
+        },
+        askDelete: function (entry) {
+            this.currentEntry = entry;
+            this.$refs.deleteModal.show();
+        },
+        editEntry: function(index) {
+            this.currentEntry = this.entries[index];
+            this.openDynamicModal('add-student-modal');
+        },
+        deleteEntry: function () {
+            const token = { xsrfCookieName: 'csrftoken', xsrfHeaderName: 'X-CSRFToken'};
+            axios.delete('/student_absence/api/student_absence/' + this.currentEntry.id + '/', token)
+            .then(response => {
+                this.loadEntries();
+            });
+
+            this.currentEntry = null;
+        },
     },
     mounted: function () {
         this.menuInfo = menu;

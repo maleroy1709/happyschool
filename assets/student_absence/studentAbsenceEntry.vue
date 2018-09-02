@@ -21,8 +21,18 @@
     <div>
         <transition appear name="fade">
             <b-card>
-                <strong>{{ rowData.student.display }} : </strong>
-                Absent du {{ rowData.date_absence_start }} au {{ rowData.date_absence_end}}.
+                <b-row>
+                    <b-col><strong><a href="#" @click="filterStudent">{{ rowData.student.display }}</a> : </strong>
+                    Absent du {{ rowData.date_absence_start }} au {{ rowData.date_absence_end}}.</b-col>
+                    <b-col sm="2"><div class="text-right">
+                        <b-btn variant="light" size="sm" @click="editEntry" class="card-link">
+                            <icon scale="1.3" name="edit" color="green" class="align-text-bottom"></icon>
+                        </b-btn>
+                        <b-btn variant="light" size="sm" @click="deleteEntry"class="card-link">
+                            <icon scale="1.3" name="trash" color="red" class="align-text-bottom"></icon>
+                        </b-btn>
+                    </div></b-col>
+                </b-row>
             </b-card>
         </transition>
     </div>
@@ -37,6 +47,17 @@ export default {
         return {
         }
     },
+    methods: {
+        deleteEntry: function () {
+            this.$emit('delete');
+        },
+        editEntry: function () {
+            this.$emit('edit');
+        },
+        filterStudent: function () {
+            this.$emit('filterStudent', this.rowData.student_id);
+        }
+    }
 }
 </script>
 
