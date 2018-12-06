@@ -29,10 +29,14 @@
                 <b-col>
                     <b-form-group>
                         <div>
-                            <b-button v-if="$store.state.canAdd" variant="outline-success" @click="openModal(false)">
+                            <b-button v-if="$store.state.canAdd" variant="outline-success" @click="openModal('add-schedule-modal')">
                                 <icon name="plus" scale="1" color="green"></icon>
                                 Ajouter un changement
                             </b-button>
+                            <b-btn variant="secondary" @click="openModal('export-schedule-modal')">
+                                <icon name="file" scale="1" ></icon>
+                                Sommaire
+                            </b-btn>
                             <b-button variant="outline-secondary" v-b-toggle.filters>
                                 <icon name="search" scale="1"></icon>
                                 Ajouter des filtres
@@ -91,6 +95,7 @@
         <add-schedule-modal ref="addScheduleModal" :entry="currentEntry"
             @update="loadEntries" @reset="currentEntry = null">
         </add-schedule-modal>
+        <export-schedule-modal ref="exportScheduleModal"></export-schedule-modal>
     </div>
 </template>
 
@@ -106,6 +111,7 @@ import Menu from '../common/menu.vue';
 
 import ScheduleChangeEntry from './scheduleChangeEntry.vue';
 import AddScheduleModal from './addScheduleModal.vue';
+import ExportScheduleModal from './exportScheduleModal.vue';
 
 import axios from 'axios';
 window.axios = axios;
@@ -179,8 +185,9 @@ export default {
             this.currentPage = page;
             this.loadEntries();
         },
-        openModal: function () {
-            this.$refs.addScheduleModal.show();
+        openModal: function (modal) {
+            if (modal === 'add-schedule-modal') this.$refs.addScheduleModal.show();
+            if (modal === 'export-schedule-modal') this.$refs.exportScheduleModal.show();
         },
         applyFilter: function () {
             this.filter = "";
@@ -212,15 +219,13 @@ export default {
             this.currentEntry = null;
         },
         editEntry: function(entry, copy) {
-            console.log(entry);
-            console.log(copy);
             if (copy) {
                 this.currentEntry = Object.assign({}, entry);
                 delete this.currentEntry.id;
             } else {
                 this.currentEntry = entry;
             }
-            this.openModal();
+            this.openModal('add-schedule-modal');
         },
         loadEntries: function () {
             axios.get('/schedule_change/api/schedule_change/?page=' + this.currentPage + this.filter + this.ordering)
@@ -276,6 +281,7 @@ export default {
         'filters': Filters,
         'app-menu': Menu,
         'add-schedule-modal': AddScheduleModal,
+        'export-schedule-modal': ExportScheduleModal,
         'schedule-change-entry': ScheduleChangeEntry,
     },
 }
