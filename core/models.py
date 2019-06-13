@@ -17,10 +17,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with HappySchool.  If not, see <http://www.gnu.org/licenses/>.
 
+import requests
+
 from django.conf import settings
 from django.db import models
 
 from .ldap import get_ldap_connection
+from .serializers import TeachingSerializer, ClasseSerializer
 
 
 class CoreSettingsModel(models.Model):
@@ -32,7 +35,26 @@ class CoreSettingsModel(models.Model):
                                     blank=True, null=True, default=None)
 
 
-class TeachingModel(models.Model):
+class RemoteModel(models.Model):
+    model_url = ""
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        super().save(force_insert, force_insert, using, update_fields)
+        sync_remote = False
+        if sync_remote:
+            _copy_to_remote(self, TeachingSerializer, self.model_url)
+
+    def delete(self, using=None, keep_parents=False):
+        super().delete(using, keep_parents)
+        sync_remote = False
+        if sync_remote:
+            _delete_remote(self, self.model_url)
+
+
+class TeachingModel(RemoteModel):
+    model_url = "core/api/teaching/"
+
     display_name = models.CharField(max_length=100)
     name = models.CharField(max_length=100, help_text="Nom simple pour la programmation.")
 
@@ -40,7 +62,8 @@ class TeachingModel(models.Model):
         return "%s (%s)" % (self.display_name, self.name)
 
 
-class ClasseModel(models.Model):
+class ClasseModel(RemoteModel):
+    model_url = "core/api/classe/"
     year = models.IntegerField()
     letter = models.CharField(max_length=20)
     teaching = models.ForeignKey(TeachingModel, on_delete=models.CASCADE)
@@ -219,3 +242,33 @@ class ImportCalendarModel(models.Model):
 
     def __str__(self):
         return self.name
+
+
+def _get_remote_settings() -> dict:
+    core_settings = CoreSettingsModel.objects.first()
+    remote_url = core_settings.remote
+    # Ensure a slash at the end.
+    if remote_url[-1] != '/':
+        remote_url += '/'
+    remote_token = core_settings.remote_token
+    headers = {'Authorization': 'Token %s' % remote_token}
+    return {"remote_url": remote_url, "headers": headers}
+
+
+def _copy_to_remote(instance, serializer, url):
+    remote_settings = _get_remote_settings()
+    remote_url = remote_settings["remote_url"]
+    remote_url += url
+    method = requests.post if instance.pk else requests.put
+    if method != requests.post:
+        remote_url += '%i/' % instance.pk
+    instance.request.data = serializer(instance).data
+    method(remote_url, headers=remote_settings["headers"], json=instance.request.data)
+
+
+def _delete_remote(instance, url):
+    remote_settings = _get_remote_settings()
+    remote_url = remote_settings["remote_url"]
+    remote_url += url
+    remote_url += '%i/' % instance.pk
+    requests.delete(remote_url, headers=remote_settings["headers"])
